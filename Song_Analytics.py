@@ -42,7 +42,7 @@ class Song_Analytics_Data_Challenge:
 
 # General Functions        
     def read_data(self):
-        df = pd.DataFrame(data = pd.read_csv(self.data_store_location+self.file_name,header='infer',encoding='utf-8'))
+        df = pd.DataFrame(data = pd.read_csv(self.data_store_location+self.file_name,header='infer', encoding='utf-8' , na_values= '-'))
         return df
     
     
@@ -62,8 +62,11 @@ class Song_Analytics_Data_Challenge:
         return filtered_df
 
 
-    def agg(self, df,groupby_cols,count_cols):
-        df_agg = df.groupby(groupby_cols)[count_cols].agg(pd.Series.count).reset_index()
+    def agg(self, df, groupby_cols, count_cols, **kwargs):
+        if ('method' in kwargs) & (kwargs['method'] == 'sum'):
+                df_agg = df.groupby(groupby_cols)[count_cols].agg(pd.Series.sum).reset_index()
+        else:
+            df_agg = df.groupby(groupby_cols)[count_cols].agg(pd.Series.count).reset_index()
         return df_agg
 
     
@@ -82,13 +85,13 @@ class Song_Analytics_Data_Challenge:
     def q3(self, df, **kwargs): 
         fav_song = self.filter_value(df, **kwargs ).reset_index()
         months_on_chart_US = len(fav_song['month'].tolist())
-        best_position_US = fav_song['us'].astype(float).min()
-        best_month_US = fav_song.iloc[fav_song['us'].astype(float).idxmin()]['month']
+        best_position_US = fav_song['us'].min()
+        best_month_US = fav_song.iloc[fav_song['us'].idxmin()]['month']
         return months_on_chart_US, best_position_US , best_month_US
 
 
     def q4(self, df):
-        agg_df_artist = self.agg(df, 'artist', 'month')
+        agg_df_artist = self.agg(df, 'artist', 'month' , method = 'count')
         artist_most_time_on_chart = agg_df_artist['artist'].iloc[agg_df_artist['month'].idxmax()]
         most_time_on_chart = agg_df_artist['month'].iloc[agg_df_artist['month'].idxmax()]
         return artist_most_time_on_chart , most_time_on_chart
@@ -99,22 +102,24 @@ class Song_Analytics_Data_Challenge:
 
 
     def q6(self, df, **kwargs):
-        return list(self.unique_value(self.filter_value(df, **kwargs), 'song'))
+        df_target_artist = self.filter_value(df, artist = kwargs['artist'])
+        agg_df = self.agg(df_target_artist, 'song' , kwargs['country'] , method = 'count')
+        song_list = agg_df[agg_df[kwargs['country']] == kwargs['countryhit']]
+        return  song_list 
 
 
     def q7(self, df, artist_name):
-        agg_df_artist_month = self.agg(self.filter_value(df, artist = artist_name),'month','song')
+        agg_df_artist_month = self.agg(self.filter_value(df, artist = artist_name),'month','song' , method = 'count')
         max_num_songs = agg_df_artist_month['song'].max()
         artist_best_month = self.filter_value(agg_df_artist_month, song = max_num_songs)['month'].tolist()
         artist_metrics = self.filter_col(self.filter_value(df , month = artist_best_month[0], artist = artist_name), ['month' , 'artist' , 
-        'song' ,'us']).reset_index(drop=True)
-        artist_metrics['us'] = artist_metrics['us'].apply(pd.to_numeric)
-        return artist_metrics.sort_values('us')
+        'song' ,'us']).reset_index(drop=True).sort_values('us')
+        return artist_metrics
 
 
     def q8(self, df, start_date, end_date):
         df_filtered = self.filter_col(df, ['month', 'song', 'artist'])
-        df_filtered['month'] = pd.to_datetime(df_filtered['month'], format = '%b-%y')
+        df_filtered['month'] = pd.to_datetime(df_filtered['month'], format = '%b %Y')
         mask = (df_filtered['month'] >= start_date) & (df_filtered['month'] <= end_date)
         df_yr = df_filtered[ mask ]
         df_yr_agg = df_yr.groupby(['artist']).agg('nunique').sort_values('song', ascending = False)\
@@ -123,17 +128,12 @@ class Song_Analytics_Data_Challenge:
 
 
     def q8_plot(self, df, graph_title, *args):
-        #Creating Bar Graph
         sns.set(style="whitegrid")
-
-        # Initialize the matplotlib figure
         f, ax = plt.subplots(figsize=(20, 15))
         sns.set_context("notebook", font_scale=1.5, rc={"lines.linewidth": 2.5})
         ax = sns.barplot(x = args[0] , y = args[1] , data = df , label = "Number of Songs", palette="Blues_r", color="b" , saturation=0.8)
         ax.set_title(graph_title)
         ax.set(xlabel='Name of Artist', ylabel='No. of Unique Songs')
-
-        # Add a legend and informative axis label
         ax.legend(ncol=2, loc="upper right", frameon=True)
         sns.despine(left=True, bottom=True)
         return plt.show()

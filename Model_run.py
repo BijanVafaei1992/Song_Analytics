@@ -42,17 +42,19 @@ class Model_run:
         print ans4
         
         
-        hit = '1'
+        hit = 1
         ans5 = self.Tc.q5(chart, artist = 'Drake', ca = hit)
         print'###ANSWER 5:'
         print ans5 
         
         
-        ans6 = self.Tc.q6(chart, artist = 'Lady GaGa', au = '-')
+        nohit = 0
+        artist_name = 'Lady GaGa'
+        ans6 = self.Tc.q6(chart , artist = artist_name , country = 'au' ,  countryhit = nohit)
         print'###ANSWER 6:'  
         print ans6
-              
         
+                 
         artist_name = 'Ariana Grande'
         ans7 = self.Tc.q7(chart, artist_name)
         print'###ANSWER 7:'
